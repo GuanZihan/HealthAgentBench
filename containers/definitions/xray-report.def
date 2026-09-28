@@ -1,0 +1,31 @@
+Bootstrap: docker
+From: python:3.12-slim
+
+%labels
+    org.opencontainers.image.title HealthAgentBench X-ray-report-correction family
+    org.opencontainers.image.source https://github.com/microsoft/HealthAgentBench
+    healthagentbench.commit ce89def2edf56f4a2ef068f37c8544bff944d5fc
+
+%post
+    set -eux
+    apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        bash ca-certificates curl wget git util-linux jq ripgrep
+    rm -rf /var/lib/apt/lists/*
+    python -m venv /opt/verifier-venv
+    /opt/verifier-venv/bin/pip install --no-cache-dir --upgrade pip
+    /opt/verifier-venv/bin/pip install --no-cache-dir \
+        openai==0.28.0 \
+        'aiolimiter>=1.1.0' \
+        'git+https://github.com/microsoft/chexprompt.git@main'
+    mkdir -p /workspace /logs/verifier /data/patient
+
+%environment
+    export PYTHONDONTWRITEBYTECODE=1
+
+%runscript
+    cd /workspace
+    if [ "$#" -eq 0 ]; then
+        exec /bin/bash
+    fi
+    exec "$@"

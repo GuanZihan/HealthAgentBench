@@ -1,0 +1,9 @@
+# Runtime dataset caches. These may contain gated or redistribution-restricted
+# clinical data and must never be committed.
+clinical_trial_matching/assets/raw_cache/
+ct_abnormality/assets/raw_cache/
+ehr_data_quality/assets/raw_cache/
+ehr_event_modelling/assets/
+tumor_area_selection_pathology/assets/raw_cache/
+xray_report_correction/assets/mimic-cxr/
+xray_report_correction/assets/mimic-cxr-jpg/

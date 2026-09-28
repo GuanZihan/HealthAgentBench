@@ -1,0 +1,55 @@
+Bootstrap: docker
+From: python:3.11-slim
+
+%labels
+    org.opencontainers.image.title HealthAgentBench EHR-to-MEDS
+    org.opencontainers.image.source https://github.com/microsoft/HealthAgentBench
+    healthagentbench.commit ce89def2edf56f4a2ef068f37c8544bff944d5fc
+
+%files
+    workspace /workspace
+
+%post
+    set -eux
+
+    apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        bash \
+        ca-certificates \
+        curl \
+        git
+    rm -rf /var/lib/apt/lists/*
+
+    python -m pip install --no-cache-dir \
+        uv==0.9.26 \
+        pyarrow==23.0.1 \
+        pyyaml==6.0.3
+
+    git clone \
+        https://github.com/Medical-Event-Data-Standard/MIMIC_IV_MEDS.git \
+        /workspace/MIMIC_IV_MEDS
+
+    cd /workspace/MIMIC_IV_MEDS
+    git checkout 9699e0865b050325459b11f3c4e226a9dbe5b496
+    test "$(git rev-parse HEAD)" = \
+        "9699e0865b050325459b11f3c4e226a9dbe5b496"
+
+    mkdir -p \
+        /workspace/output \
+        /workspace/staged_demo/raw_input
+
+    python /workspace/scripts/stage_demo_data.py \
+        --output-dir /workspace/staged_demo/raw_input
+
+%environment
+    export PYTHONPATH=/workspace/runtime_patch
+    export PYTHONDONTWRITEBYTECODE=1
+
+%runscript
+    cd /workspace
+
+    if [ "$#" -eq 0 ]; then
+        exec /bin/bash
+    fi
+
+    exec "$@"

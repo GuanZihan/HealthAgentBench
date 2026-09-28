@@ -131,11 +131,13 @@ set `CHEXPROMPT_AZURE_OPENAI_API_KEY`, `CHEXPROMPT_AZURE_OPENAI_ENDPOINT`, and `
 
 The coding agent also needs credentials. For subscription authentication, run `claude setup-token` and set `CLAUDE_CODE_OAUTH_TOKEN` for Claude Code, or log in to Codex on the host and set `CODEX_FORCE_AUTH_JSON=1` to use `$HOME/.codex/auth.json`. Alternatively, configure `ANTHROPIC_API_KEY` for Claude Code or `OPENAI_API_KEY` for Codex. `ANTHROPIC_BASE_URL` and `OPENAI_BASE_URL` are optional and are only needed when using third-party endpoints. See `.env.example` for the template.
 
-### Exporting environment variables from .env
-Make sure you have `.env` at this repo directory so that the containers can read the environment variables. 
-```bash
-set -a; source .env; set +a
-```
+### Loading credentials safely
+
+Copy `.env.example` to `.env` at the repository root. The Apptainer launchers
+read allowlisted dataset and verifier credentials directly from this file and
+keep bootstrap-only credentials out of the Agent container. Do not source the
+entire file into the parent shell. Export only the coding-agent authentication
+variables that your selected Agent requires.
 
 ## Usage
 
@@ -196,6 +198,17 @@ uv run harbor run \
 
 Category prefixes for `--include-task-name`: `clinical_trial_matching_*`, `ct_abnormality_*`, `ehr_data_quality_*`, `ehr_event_modelling_*`, `ehr_to_meds_etl`, `tumor_area_selection_pathology_*`, `xray_report_correction_*`
 
+### Run matched environmental-fault experiments
+
+The [`faults/`](faults/README.md) harness adds deterministic matched
+`control`/`error` conditions for missing, corrupted, or truncated inputs and
+Agent-scoped missing dependencies. On Rivanna, the harness uses family-level
+Apptainer/SIF images and creates a private runtime workspace for every trial;
+Docker and Docker Compose are not required. The original task instructions,
+model settings, and verifiers remain unchanged between a matched pair. See
+[`containers/README.md`](containers/README.md) for image preparation and
+[`faults/README.md`](faults/README.md) for experiment commands and evidence.
+
 
 
 ## Harbor Background
@@ -219,5 +232,3 @@ If you use HealthAgentBench in your research, please cite:
   year = {2026}
 }
 ```
-
-

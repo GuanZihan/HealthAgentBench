@@ -15,6 +15,27 @@ wheels/
 # Experiment artifacts
 results/
 
+# Harbor rollout outputs
+jobs/
+
+# Local Apptainer and model-download caches
+.apptainer-cache/
+.cache/
+
+# Built Apptainer images are reproducible from committed definition files
+*.sif
+
+# Local test, coverage, and type-checker caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Editor and merge-tool backup files
+*.orig
+
 # temporary files
 .tmp/
 

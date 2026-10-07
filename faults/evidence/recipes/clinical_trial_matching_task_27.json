@@ -1,0 +1,58 @@
+{
+  "approval": {
+    "approved_at": "2026-10-01T21:01:25.710889+00:00",
+    "generation_record_sha256": "b5922c2c5da377fb3c2b99cf1b9c0e8729bbe12babf13a8a8b3f0d1bdaec72b6",
+    "reviewer": "bxv6gs"
+  },
+  "curation": {
+    "locked": true,
+    "method": "manual_fact_level_revision",
+    "scope": "all direct mentions of each selected clinical fact"
+  },
+  "edits": [
+    {
+      "category": "treatment",
+      "edit_id": "e01",
+      "end": 243,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "a reported but unverified combination therapy",
+      "natural_end": 266,
+      "natural_start": 175,
+      "natural_text_sha256": "73fe49da1ce0ad408b611367024a723ae8e039bd4d2363692ae4765f9a1bbb32",
+      "source_text_sha256": "25074a55b37ea890be4102bc4c596942a9ed8b58811e8fda0a609b7776681eff",
+      "start": 184
+    },
+    {
+      "category": "treatment",
+      "edit_id": "e02",
+      "end": 289,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "Reported but unverified antiviral agents",
+      "natural_end": 331,
+      "natural_start": 267,
+      "natural_text_sha256": "08cb5a854cb4229da97f3234771cd431c23dc5bc7f27f13dff926d8cc16ba26a",
+      "source_text_sha256": "0f4159856f42d11a89eb060a9f3fa7012edebdeb2cbf6e2617213109e79c9bc0",
+      "start": 267
+    }
+  ],
+  "generator": {
+    "api_mode": "responses",
+    "attempt_count": 1,
+    "model": "gpt-5.5-2026-04-23",
+    "model_revision": "gpt-5.5-2026-04-23",
+    "partial_salvage": false,
+    "prompt_sha256": "92c832eba689a241bcc533975d7c6b4ae2386d2943c37d87f81fee5f6f480999",
+    "reasoning_effort": "medium",
+    "recorded_at": "2026-10-01T17:01:59.859267+00:00",
+    "rejected_selection_count": 0,
+    "seed": null,
+    "store": false,
+    "temperature": null
+  },
+  "schema_version": 2,
+  "severity": "evidence-insufficient",
+  "source_sha256": "6994da45384a7bad748ec9875e3b66d71b66bf54aedb1ff2fd6e18a1dd6f759b",
+  "status": "approved",
+  "task": "clinical_trial_matching_task_27",
+  "topic_id": 27
+}

@@ -13,6 +13,9 @@ from .family_singularity import family_for_task
 from .inject import AGENT_RUNTIME_PATH, DEFAULT_AGENT_PATH, SUPPORTED_SCENARIOS
 
 
+TEXT_ONLY_CODEX_IMPORT_PATH = "faults.codex_agent:TextOnlyCodex"
+
+
 def _resolve_task(path: Path, repository_root: Path) -> Path:
     for candidate in (path, repository_root / path, repository_root / "tasks" / path):
         resolved = candidate.expanduser().resolve()
@@ -23,6 +26,46 @@ def _resolve_task(path: Path, repository_root: Path) -> Path:
 
 def _contains_option(arguments: list[str], names: set[str]) -> bool:
     return any(argument.split("=", 1)[0] in names for argument in arguments)
+
+
+def _option_values(arguments: list[str], names: set[str]) -> list[str]:
+    values: list[str] = []
+    index = 0
+    while index < len(arguments):
+        argument = arguments[index]
+        if argument in names and index + 1 < len(arguments):
+            values.append(arguments[index + 1])
+            index += 2
+            continue
+        if argument.split("=", 1)[0] in names and "=" in argument:
+            values.append(argument.split("=", 1)[1])
+        index += 1
+    return values
+
+
+# Replace only the stock Codex/Qwen selector, preserving explicit custom agents.
+def _configure_qwen_coder_agent(arguments: list[str]) -> list[str]:
+    if _contains_option(arguments, {"--agent-import-path"}):
+        return list(arguments)
+    if _option_values(arguments, {"--agent", "-a"}) != ["codex"]:
+        return list(arguments)
+    if _option_values(arguments, {"--model", "-m"}) != ["qwen-coder"]:
+        return list(arguments)
+
+    configured: list[str] = []
+    index = 0
+    while index < len(arguments):
+        argument = arguments[index]
+        if argument in {"--agent", "-a"}:
+            index += 2
+            continue
+        if argument.split("=", 1)[0] in {"--agent", "-a"}:
+            index += 1
+            continue
+        configured.append(argument)
+        index += 1
+    configured.extend(("--agent-import-path", TEXT_ONLY_CODEX_IMPORT_PATH))
+    return configured
 
 
 def _agent_env_keys(arguments: list[str]) -> set[str]:
@@ -64,6 +107,15 @@ def _dependency_agent_env(task_name: str) -> str:
     return f"PATH={DEFAULT_AGENT_PATH}"
 
 
+# Reserve only the Agent environment key required by the selected fault shim.
+def _scenario_agent_env(task_name: str, scenario: str) -> str | None:
+    if scenario == "missing-dependency":
+        return _dependency_agent_env(task_name)
+    if scenario == "protected-file-sudo":
+        return f"PATH={DEFAULT_AGENT_PATH}"
+    return None
+
+
 def build_harbor_command(
     *,
     harbor: str,
@@ -74,6 +126,7 @@ def build_harbor_command(
     harbor_arguments: list[str],
 ) -> tuple[list[str], str | None]:
     family_for_task(task_dir.name)
+    harbor_arguments = _configure_qwen_coder_agent(harbor_arguments)
     forbidden = {
         "--path",
         "--extra-docker-compose",
@@ -88,13 +141,12 @@ def build_harbor_command(
             "--mounts"
         )
 
-    agent_env = None
-    if scenario == "missing-dependency":
-        agent_env = _dependency_agent_env(task_dir.name)
+    agent_env = _scenario_agent_env(task_dir.name, scenario)
+    if agent_env is not None:
         key = agent_env.split("=", 1)[0]
         if key in _agent_env_keys(harbor_arguments):
             raise ValueError(
-                f"The missing-dependency runtime owns Agent environment key {key}"
+                f"The {scenario} runtime owns Agent environment key {key}"
             )
 
     resolv_mount = json.dumps(

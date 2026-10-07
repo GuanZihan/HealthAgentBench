@@ -1,0 +1,58 @@
+{
+  "approval": {
+    "approved_at": "2026-10-01T21:02:06.822685+00:00",
+    "generation_record_sha256": "a10860c1a2d7000059d8a05b4a75f545d86d9610606c374f289c564239955fd4",
+    "reviewer": "bxv6gs"
+  },
+  "curation": {
+    "locked": true,
+    "method": "manual_fact_level_revision",
+    "scope": "all direct mentions of each selected clinical fact"
+  },
+  "edits": [
+    {
+      "category": "laboratory_value",
+      "edit_id": "e02",
+      "end": 739,
+      "importance": "supporting",
+      "low_quality_replacement": "reported but unavailable;",
+      "natural_end": 739,
+      "natural_start": 728,
+      "natural_text_sha256": "93a8ae4538e0782688e8fc4a9a3b081f3e1201e075aaa6d9a3f6b62bf18f07d6",
+      "source_text_sha256": "a19502c87ac9419e68ab4ce3b38da4be43ee71156eae2dfa2258fa1e00c6a587",
+      "start": 733
+    },
+    {
+      "category": "biomarker",
+      "edit_id": "e01",
+      "end": 833,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "reported but unavailable;",
+      "natural_end": 833,
+      "natural_start": 784,
+      "natural_text_sha256": "bc1e282bbd357235ccee823ef1cb599becfdfae5c65039ba52d547f13bb44f97",
+      "source_text_sha256": "85cd226ebdd21598ebb629cbb057ce2ef7decbadaec5021905984e24eda117bf",
+      "start": 813
+    }
+  ],
+  "generator": {
+    "api_mode": "responses",
+    "attempt_count": 1,
+    "model": "gpt-5.5-2026-04-23",
+    "model_revision": "gpt-5.5-2026-04-23",
+    "partial_salvage": false,
+    "prompt_sha256": "92c832eba689a241bcc533975d7c6b4ae2386d2943c37d87f81fee5f6f480999",
+    "reasoning_effort": "medium",
+    "recorded_at": "2026-10-01T17:02:38.822283+00:00",
+    "rejected_selection_count": 0,
+    "seed": null,
+    "store": false,
+    "temperature": null
+  },
+  "schema_version": 2,
+  "severity": "evidence-insufficient",
+  "source_sha256": "91b57ff1171ab967e4fd596e4c4410fc38f94ee92abbc12f6f525cc75f5998c9",
+  "status": "approved",
+  "task": "clinical_trial_matching_task_45",
+  "topic_id": 45
+}

@@ -1,0 +1,70 @@
+{
+  "approval": {
+    "approved_at": "2026-10-01T21:01:12.722526+00:00",
+    "generation_record_sha256": "71abef2ba4c514a3c484feed2d93a7e1788d760c28e5252b24c676db5ed4ce79",
+    "reviewer": "bxv6gs"
+  },
+  "curation": {
+    "locked": true,
+    "method": "manual_fact_level_revision",
+    "scope": "all direct mentions of each selected clinical fact"
+  },
+  "edits": [
+    {
+      "category": "diagnosis",
+      "edit_id": "e01a",
+      "end": 70,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "a reported but unverified secondary diagnosis",
+      "natural_end": 70,
+      "natural_start": 40,
+      "natural_text_sha256": "4e8a78ff6f6eec43ab69871b12b6454dd8e1d8dd1977da2f968d83efc9c83d08",
+      "source_text_sha256": "35823ff158aa0052b71f79192ce55064459e80bef01de0c17203ea6548b2d1be",
+      "start": 45
+    },
+    {
+      "category": "performance_status",
+      "edit_id": "e02",
+      "end": 898,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "unverified performance status",
+      "natural_end": 898,
+      "natural_start": 840,
+      "natural_text_sha256": "847b6384258b1456e49f8fe2a1c3e859fb6b54e4aafa27543d7ed54c4d0aff35",
+      "source_text_sha256": "2e7e4c947a935168ba1352d3eca8f2f6a163a58793b5e68686d6d92b3efe478a",
+      "start": 870
+    },
+    {
+      "category": "diagnosis",
+      "edit_id": "e01b",
+      "end": 1261,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "a reported but unavailable biopsy diagnosis",
+      "natural_end": 1261,
+      "natural_start": 1215,
+      "natural_text_sha256": "49051a35311520826c80b10a9c22df37269a95abb024e4898e7080e42ccde138",
+      "source_text_sha256": "d266e09e824cd0a07f2f33e216c20c428746a28018825a52fdabeb6cf504a548",
+      "start": 1237
+    }
+  ],
+  "generator": {
+    "api_mode": "responses",
+    "attempt_count": 2,
+    "model": "gpt-5.5-2026-04-23",
+    "model_revision": "gpt-5.5-2026-04-23",
+    "partial_salvage": false,
+    "prompt_sha256": "92c832eba689a241bcc533975d7c6b4ae2386d2943c37d87f81fee5f6f480999",
+    "reasoning_effort": "medium",
+    "recorded_at": "2026-10-01T17:04:17.543226+00:00",
+    "rejected_selection_count": 0,
+    "seed": null,
+    "store": false,
+    "temperature": null
+  },
+  "schema_version": 2,
+  "severity": "evidence-insufficient",
+  "source_sha256": "bc85dec908cae01043338f25ec5555a791aa22f8474553efd8b93d69853a93f2",
+  "status": "approved",
+  "task": "clinical_trial_matching_task_8",
+  "topic_id": 8
+}

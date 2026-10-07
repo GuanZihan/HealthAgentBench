@@ -5,7 +5,9 @@ import fnmatch
 import hashlib
 import json
 import os
+import shlex
 import shutil
+import stat
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -16,20 +18,26 @@ from typing import Any
 from dotenv import dotenv_values
 from harbor.environments.singularity import SingularityEnvironment
 
+from .evidence import EVIDENCE_SCENARIOS, apply_evidence_recipe, load_evidence_recipe
+from .evidence.modalities import apply_modality_evidence
 from .inject import (
     AGENT_RUNTIME_PATH,
     FILE_ACTIONS,
+    PERMISSION_SCENARIOS,
     SUPPORTED_SCENARIOS,
     Condition,
     Dependency,
     PrimaryInput,
     Scenario,
     apply_fault,
+    apply_permission_fault,
     dependency_validation_command,
     file_state,
+    permission_limited_command,
     select_target,
     write_dependency_runtime,
 )
+from .privilege import PrivilegeBroker, write_privilege_runtime
 
 
 @dataclass(frozen=True)
@@ -199,9 +207,7 @@ FAMILY_SPECS = (
             "latest-glob",
             "/data/patient/study_*/report.txt",
         ),
-        dependency=Dependency(
-            "executable", "jq", PurePosixPath("/usr/bin/jq")
-        ),
+        dependency=Dependency("executable", "jq", PurePosixPath("/usr/bin/jq")),
         tests_read_only=False,
         bootstrap_secrets=(
             ("PN_USER", ("PN_USER", "PHYSIONET_USER")),
@@ -285,7 +291,9 @@ def host_path_to_container(runtime: Path, spec: FamilySpec, host_path: Path) -> 
                 container = f"{container}/{relative}"
             candidates.append((len(source.parts), container))
     if not candidates:
-        raise FamilyRuntimeError(f"Host fault target is not in a runtime mount: {host_path}")
+        raise FamilyRuntimeError(
+            f"Host fault target is not in a runtime mount: {host_path}"
+        )
     return max(candidates)[1]
 
 
@@ -341,6 +349,7 @@ class FamilySingularityEnvironment(SingularityEnvironment):
         self._fault_target_host: Path | None = None
         self._fault_target_container: str | None = None
         self._fault_agent_env: str | None = None
+        self._privilege_broker: PrivilegeBroker | None = None
         self._family_runtime_dir: Path | None = None
         self._family_mounts_added = False
         super().__init__(*args, **kwargs)
@@ -370,7 +379,9 @@ class FamilySingularityEnvironment(SingularityEnvironment):
         environment = os.environ.copy()
         available: list[str] = []
         for target_key, aliases in self._family.bootstrap_secrets:
-            value = next((configured[key] for key in aliases if configured.get(key)), None)
+            value = next(
+                (configured[key] for key in aliases if configured.get(key)), None
+            )
             if value is None:
                 continue
             environment[f"APPTAINERENV_{target_key}"] = value
@@ -421,7 +432,9 @@ class FamilySingularityEnvironment(SingularityEnvironment):
     def _bootstrap_bindings(self, runtime: Path) -> list[str]:
         bindings = [
             _bind_argument(runtime / "workspace", "/workspace"),
-            _bind_argument(Path("/etc/resolv.conf"), "/etc/resolv.conf", read_only=True),
+            _bind_argument(
+                Path("/etc/resolv.conf"), "/etc/resolv.conf", read_only=True
+            ),
         ]
 
         for mount in self._family.runtime_mounts:
@@ -435,7 +448,9 @@ class FamilySingularityEnvironment(SingularityEnvironment):
             source = self.environment_dir / mount.source
             if not source.exists():
                 raise FamilyRuntimeError(f"Missing bootstrap input: {source}")
-            bindings.append(_bind_argument(source.resolve(), mount.target, read_only=True))
+            bindings.append(
+                _bind_argument(source.resolve(), mount.target, read_only=True)
+            )
 
         for mount in self._family.cache_mounts:
             source = self._repository_root / mount.source
@@ -552,12 +567,18 @@ class FamilySingularityEnvironment(SingularityEnvironment):
                 raise FamilyRuntimeError(
                     f"Runtime mount target conflicts with a Harbor mount: {mount.target}"
                 )
+            # A recoverable permission fault needs a writable per-trial data mount.
+            read_only = mount.read_only
+            if self._fault_scenario == "permission-denied-recoverable":
+                profile_path = self._family.primary_input.path.split("*", 1)[0]
+                if profile_path.startswith(mount.target.rstrip("/") + "/"):
+                    read_only = False
             self._mounts.append(
                 {
                     "type": "bind",
                     "source": str((runtime / mount.source).resolve()),
                     "target": mount.target,
-                    **({"read_only": True} if mount.read_only else {}),
+                    **({"read_only": True} if read_only else {}),
                 }
             )
             existing_targets.add(mount.target)
@@ -576,6 +597,137 @@ class FamilySingularityEnvironment(SingularityEnvironment):
                 "read_only": True,
             }
         )
+
+    # Overlay one protected target as read-only without freezing its whole workspace.
+    def _add_protected_target_mount(self, target: Path, container_target: str) -> None:
+        if any(mount.get("target") == container_target for mount in self._mounts):
+            raise FamilyRuntimeError(
+                f"Protected target conflicts with a Harbor mount: {container_target}"
+            )
+        self._mounts.append(
+            {
+                "type": "bind",
+                "source": str(target.resolve()),
+                "target": container_target,
+                "read_only": True,
+            }
+        )
+
+    # Resolve the family-specific primary input once for all file-level faults.
+    def _select_primary_target(self, runtime: Path) -> tuple[Path, str]:
+        profile = self._family.primary_input
+        allowed_root = container_path_to_host(
+            runtime, self._family, str(profile.allowed_root)
+        )
+        expression = container_path_to_host(runtime, self._family, profile.path)
+        target = select_target(
+            selector=profile.selector,
+            target_expression=str(expression),
+            allowed_root=allowed_root,
+        )
+        container_target = host_path_to_container(runtime, self._family, target)
+        self._fault_target_host = target
+        self._fault_target_container = container_target
+        return target, container_target
+
+    # Apply one frozen clinical recipe after bootstrap and before Agent startup.
+    def _prepare_evidence_fault(
+        self,
+        *,
+        runtime: Path,
+        target: Path,
+        condition: Condition,
+        scenario: Scenario,
+    ) -> dict[str, object]:
+        # Clinical notes use reviewed Qwen spans; other modalities use fixed adapters.
+        if self._family.name == "clinical_trial_matching":
+            recipe_path = (
+                self._repository_root
+                / "faults/evidence/recipes"
+                / f"{self.environment_name}.json"
+            )
+            recipe = load_evidence_recipe(recipe_path)
+            if recipe.task != self.environment_name:
+                raise FamilyRuntimeError(
+                    f"Evidence recipe task mismatch: {recipe.task!r}"
+                )
+            source = target.read_bytes()
+            output, details = apply_evidence_recipe(
+                source,
+                recipe,
+                scenario=scenario,
+                condition=condition,
+            )
+            target.write_bytes(output)
+            return {
+                "adapter": "clinical-reviewed-span-recipe-v1",
+                "recipe_path": str(recipe_path.relative_to(self._repository_root)),
+                "recipe_sha256": _sha256(recipe_path),
+                "generator": recipe.generator,
+                **details,
+            }
+
+        # Non-text families apply deterministic task-aware evidence transforms.
+        application = apply_modality_evidence(
+            family=self._family.name,
+            runtime=runtime,
+            target=target,
+            task_name=self.environment_name,
+            task_dir=self._task_dir,
+            condition=condition,
+            scenario=scenario,
+            shim_source=Path(__file__).with_name("evidence")
+            / "pathology_sitecustomize.py",
+        )
+        for key, value in application.agent_environment.items():
+            if key == "PYTHONPATH" and self._persistent_env.get(key):
+                value = f"{value}:{self._persistent_env[key]}"
+            self._persistent_env[key] = value
+        return application.details
+
+    # Start an allowlisted sudo capability while preserving a pristine open source.
+    def _prepare_protected_sudo(
+        self,
+        *,
+        runtime: Path,
+        target: Path,
+        container_target: str,
+        condition: Condition,
+        original_mode: int,
+    ) -> dict[str, object]:
+        source = target.open("rb")
+        apply_permission_fault(condition=condition, target=target)
+        broker = PrivilegeBroker(
+            source=source,
+            target=target,
+            container_target=container_target,
+            audit_path=self.trial_paths.artifacts_dir / "fault-events.jsonl",
+            condition=condition,
+            readable_mode=original_mode,
+        )
+        try:
+            broker.start()
+            privilege_runtime = write_privilege_runtime(
+                runtime / "fault",
+                host=broker.host,
+                port=broker.port,
+                token=broker.token,
+            )
+            self._add_dependency_mount(privilege_runtime)
+            self._add_protected_target_mount(target, container_target)
+        except Exception:
+            broker.stop()
+            raise
+        self._privilege_broker = broker
+        return {
+            "emulation": "trial-local-allowlisted-broker",
+            "transport": "authenticated-loopback-tcp",
+            "broker_host": broker.host,
+            "broker_port": broker.port,
+            "allowed_operations": ["list", "cat", "cp", "chmod-u+r"],
+            "arbitrary_root": False,
+            "agent_env_key": "PATH",
+        }
 
     def _write_json(self, name: str, value: dict[str, object]) -> None:
         path = self.trial_paths.trial_dir / name
@@ -603,19 +755,7 @@ class FamilySingularityEnvironment(SingularityEnvironment):
 
         if scenario in FILE_ACTIONS:
             profile = self._family.primary_input
-            allowed_root = container_path_to_host(
-                runtime, self._family, str(profile.allowed_root)
-            )
-            expression = container_path_to_host(runtime, self._family, profile.path)
-            target = select_target(
-                selector=profile.selector,
-                target_expression=str(expression),
-                allowed_root=allowed_root,
-            )
-            self._fault_target_host = target
-            self._fault_target_container = host_path_to_container(
-                runtime, self._family, target
-            )
+            target, container_target = self._select_primary_target(runtime)
             before = file_state(target)
             action = FILE_ACTIONS[scenario]
             apply_fault(action=action, condition=condition, target=target)
@@ -624,12 +764,61 @@ class FamilySingularityEnvironment(SingularityEnvironment):
                 "allowed_root": str(profile.allowed_root),
                 "selector": profile.selector,
                 "expression": profile.path,
-                "selected_target": self._fault_target_container,
+                "selected_target": container_target,
                 "action": action,
                 "before": before,
                 "after": after,
             }
-        else:
+        elif scenario in PERMISSION_SCENARIOS:
+            profile = self._family.primary_input
+            target, container_target = self._select_primary_target(runtime)
+            original_mode = stat.S_IMODE(target.stat().st_mode)
+            before = file_state(target)
+            privilege: dict[str, object] | None = None
+            if scenario == "protected-file-sudo":
+                privilege = self._prepare_protected_sudo(
+                    runtime=runtime,
+                    target=target,
+                    container_target=container_target,
+                    condition=condition,
+                    original_mode=original_mode,
+                )
+            else:
+                apply_permission_fault(condition=condition, target=target)
+            setup["primary_input"] = {
+                "allowed_root": str(profile.allowed_root),
+                "selector": profile.selector,
+                "expression": profile.path,
+                "selected_target": container_target,
+                "action": "remove-read-permissions",
+                "recoverable_by_owner_chmod": scenario
+                == "permission-denied-recoverable",
+                "before": before,
+                "after": file_state(target),
+            }
+            if privilege is not None:
+                setup["privilege"] = privilege
+        elif scenario in EVIDENCE_SCENARIOS:
+            profile = self._family.primary_input
+            target, container_target = self._select_primary_target(runtime)
+            before = file_state(target)
+            evidence = self._prepare_evidence_fault(
+                runtime=runtime,
+                target=target,
+                condition=condition,
+                scenario=scenario,
+            )
+            setup["primary_input"] = {
+                "allowed_root": str(profile.allowed_root),
+                "selector": profile.selector,
+                "expression": profile.path,
+                "selected_target": container_target,
+                "action": scenario,
+                "before": before,
+                "after": file_state(target),
+            }
+            setup["evidence"] = evidence
+        elif scenario == "missing-dependency":
             await self._validate_base_dependency()
             dependency_runtime, agent_env = write_dependency_runtime(
                 runtime / "fault", self._family.dependency, condition
@@ -648,6 +837,8 @@ class FamilySingularityEnvironment(SingularityEnvironment):
                 "agent_env_key": agent_env.split("=", 1)[0],
                 "agent_scoped": True,
             }
+        else:
+            raise FamilyRuntimeError(f"Unsupported prepared fault scenario: {scenario}")
         self._write_json("fault-setup.json", setup)
 
     def _write_runtime_manifest(
@@ -696,9 +887,7 @@ class FamilySingularityEnvironment(SingularityEnvironment):
         command_mounts = []
         for mount in original_mounts:
             command_mount = dict(mount)
-            if command_mount.get("type") == "bind" and command_mount.get(
-                "read_only"
-            ):
+            if command_mount.get("type") == "bind" and command_mount.get("read_only"):
                 command_mount["target"] = f"{command_mount['target']}:ro"
             command_mounts.append(command_mount)
         self._mounts = command_mounts
@@ -706,6 +895,66 @@ class FamilySingularityEnvironment(SingularityEnvironment):
             await super()._start_server()
         finally:
             self._mounts = original_mounts
+
+    # Make permission faults observable despite Harbor's Apptainer fakeroot mode.
+    async def exec(
+        self,
+        command: str,
+        cwd: str | None = None,
+        env: dict[str, str] | None = None,
+        timeout_sec: int | None = None,
+        user: str | int | None = None,
+    ) -> Any:
+        if self._fault_scenario in PERMISSION_SCENARIOS and user is None:
+            command = permission_limited_command(command)
+        return await super().exec(
+            command=command,
+            cwd=cwd,
+            env=env,
+            timeout_sec=timeout_sec,
+            user=user,
+        )
+
+    # Validate the actual Agent view after mounting and capability reduction.
+    async def _validate_permission_access(self) -> None:
+        if self._fault_scenario not in PERMISSION_SCENARIOS:
+            return
+        if self._fault_target_container is None:
+            raise FamilyRuntimeError("Permission fault has no selected target")
+        read_program = f"open({self._fault_target_container!r}, 'rb').read(1)"
+        read_probe = await self.exec(
+            f"python -c {shlex.quote(read_program)}",
+            timeout_sec=30,
+        )
+        expected_readable = self._fault_condition == "control"
+        if (read_probe.return_code == 0) is not expected_readable:
+            raise FamilyRuntimeError(
+                "Agent permission probe did not observe the requested read state"
+            )
+        validation: dict[str, object] = {
+            "direct_read": "allowed" if expected_readable else "permission-denied",
+            "reduced_capabilities": [
+                "dac_override",
+                "dac_read_search",
+                "fowner",
+                "chown",
+            ],
+        }
+        if (
+            self._fault_scenario == "protected-file-sudo"
+            and self._fault_condition == "error"
+        ):
+            chmod_probe = await self.exec(
+                f"/bin/chmod u+r {shlex.quote(self._fault_target_container)}",
+                timeout_sec=30,
+            )
+            if chmod_probe.return_code == 0:
+                raise FamilyRuntimeError("Protected target accepted a direct chmod")
+            validation["direct_chmod"] = "permission-denied"
+        setup_path = self.trial_paths.trial_dir / "fault-setup.json"
+        setup = json.loads(setup_path.read_text(encoding="utf-8"))
+        setup["agent_access_validation"] = validation
+        self._write_json("fault-setup.json", setup)
 
     def _collect_final_fault_state(self) -> None:
         if self._fault_condition is None or self._fault_scenario is None:
@@ -728,7 +977,8 @@ class FamilySingularityEnvironment(SingularityEnvironment):
             event_count = 0
             if events_path.is_file():
                 event_count = sum(
-                    1 for line in events_path.read_text(encoding="utf-8").splitlines()
+                    1
+                    for line in events_path.read_text(encoding="utf-8").splitlines()
                     if line.strip()
                 )
             final["dependency"] = {
@@ -737,9 +987,35 @@ class FamilySingularityEnvironment(SingularityEnvironment):
                 "exposed": event_count > 0,
                 "event_count": event_count,
             }
+        if self._fault_scenario == "protected-file-sudo":
+            events_path = self.trial_paths.artifacts_dir / "fault-events.jsonl"
+            privilege_events: list[dict[str, object]] = []
+            if events_path.is_file():
+                for line in events_path.read_text(encoding="utf-8").splitlines():
+                    if not line.strip():
+                        continue
+                    event = json.loads(line)
+                    if isinstance(event, dict) and event.get("event") == (
+                        "protected_file_sudo"
+                    ):
+                        privilege_events.append(event)
+            final["privilege"] = {
+                "exposed": bool(privilege_events),
+                "event_count": len(privilege_events),
+                "allowed_event_count": sum(
+                    event.get("allowed") is True for event in privilege_events
+                ),
+                "operations": [
+                    str(event.get("operation", "")) for event in privilege_events
+                ],
+            }
         self._write_json("fault-final-state.json", final)
 
     def _cleanup_family_runtime(self) -> None:
+        # Stop the capability broker before deleting its client runtime.
+        if self._privilege_broker is not None:
+            self._privilege_broker.stop()
+            self._privilege_broker = None
         runtime = self._family_runtime_dir
         if runtime is None or self._family_keep_runtime:
             return
@@ -769,6 +1045,7 @@ class FamilySingularityEnvironment(SingularityEnvironment):
                 main_env_keys=main_env_keys,
             )
             await self._start_server_with_read_only_mounts()
+            await self._validate_permission_access()
         except Exception:
             self._cleanup_family_runtime()
             raise

@@ -1,0 +1,58 @@
+{
+  "approval": {
+    "approved_at": "2026-10-01T21:01:31.959991+00:00",
+    "generation_record_sha256": "6bace16673726e1f3912d83dbec9e66c4a8512f491b08e4abee1a4a2c7eb4fa2",
+    "reviewer": "bxv6gs"
+  },
+  "curation": {
+    "locked": true,
+    "method": "manual_fact_level_revision",
+    "scope": "all direct mentions of each selected clinical fact"
+  },
+  "edits": [
+    {
+      "category": "temporal_history",
+      "edit_id": "e01",
+      "end": 73,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "a reported but unverified duration",
+      "natural_end": 73,
+      "natural_start": 61,
+      "natural_text_sha256": "51ae711f5d50c54061b461d300e72448fdfd8f4ab27b87d743be873743acd9a9",
+      "source_text_sha256": "866f3db6e2c865ac7780ad5822f40d34fce0c27a30ad96a0291cb6543ec9916a",
+      "start": 65
+    },
+    {
+      "category": "laboratory_value",
+      "edit_id": "e02",
+      "end": 1078,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "a reported but unavailable value",
+      "natural_end": 1078,
+      "natural_start": 1068,
+      "natural_text_sha256": "0e6ef69982542333d7e3409b3d59fd514c1f4f8e3d3d1e24f5e189208184bdb9",
+      "source_text_sha256": "c9fca40ba8db570fad1ec0f37ea004fc083d0c164392cfb2a6f6b60311f5552d",
+      "start": 1073
+    }
+  ],
+  "generator": {
+    "api_mode": "responses",
+    "attempt_count": 1,
+    "model": "gpt-5.5-2026-04-23",
+    "model_revision": "gpt-5.5-2026-04-23",
+    "partial_salvage": false,
+    "prompt_sha256": "92c832eba689a241bcc533975d7c6b4ae2386d2943c37d87f81fee5f6f480999",
+    "reasoning_effort": "medium",
+    "recorded_at": "2026-10-01T17:02:15.075511+00:00",
+    "rejected_selection_count": 0,
+    "seed": null,
+    "store": false,
+    "temperature": null
+  },
+  "schema_version": 2,
+  "severity": "evidence-insufficient",
+  "source_sha256": "500dadc8fa13b3995814b3a72e49c769f9922be8c485aba3359545aafcbb7690",
+  "status": "approved",
+  "task": "clinical_trial_matching_task_29",
+  "topic_id": 29
+}

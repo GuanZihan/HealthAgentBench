@@ -1,0 +1,58 @@
+{
+  "approval": {
+    "approved_at": "2026-10-01T21:02:13.204283+00:00",
+    "generation_record_sha256": "3dd3d2fcdfca339f4f71174ad3aae99fed0d65b002855ad32818b1dc15924596",
+    "reviewer": "bxv6gs"
+  },
+  "curation": {
+    "locked": true,
+    "method": "manual_fact_level_revision",
+    "scope": "all direct mentions of each selected clinical fact"
+  },
+  "edits": [
+    {
+      "category": "diagnosis",
+      "edit_id": "e01",
+      "end": 84,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "reportedly diagnosed with an unspecified condition",
+      "natural_end": 84,
+      "natural_start": 32,
+      "natural_text_sha256": "a5ba564a927ad262dca44d6360a388b777cc195ae43fbaa58f3b2e23647782a7",
+      "source_text_sha256": "3656f213ba4a6d182d7d19302cf35be93b1567aef31a00ba9ec10ed984e5189a",
+      "start": 41
+    },
+    {
+      "category": "disease_stage",
+      "edit_id": "e02",
+      "end": 190,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "reported with unavailable severity and stage",
+      "natural_end": 191,
+      "natural_start": 141,
+      "natural_text_sha256": "71e46257cb24ee9256c3244d37d0a96fd2b7464ae2c034f2208ef6337fef733f",
+      "source_text_sha256": "6ab0b7b9120cfdb59c94f4a6377a3a7e8557fff4ab6610fbda8ae0f74e97e1e3",
+      "start": 156
+    }
+  ],
+  "generator": {
+    "api_mode": "responses",
+    "attempt_count": 1,
+    "model": "gpt-5.5-2026-04-23",
+    "model_revision": "gpt-5.5-2026-04-23",
+    "partial_salvage": false,
+    "prompt_sha256": "92c832eba689a241bcc533975d7c6b4ae2386d2943c37d87f81fee5f6f480999",
+    "reasoning_effort": "medium",
+    "recorded_at": "2026-10-01T17:03:45.564012+00:00",
+    "rejected_selection_count": 0,
+    "seed": null,
+    "store": false,
+    "temperature": null
+  },
+  "schema_version": 2,
+  "severity": "evidence-insufficient",
+  "source_sha256": "917dff0685a53969fb8ac0236b56a46030fb8da6ee8d6adad7402b7de6a9acc5",
+  "status": "approved",
+  "task": "clinical_trial_matching_task_75",
+  "topic_id": 75
+}

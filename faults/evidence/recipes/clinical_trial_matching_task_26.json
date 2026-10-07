@@ -1,0 +1,70 @@
+{
+  "approval": {
+    "approved_at": "2026-10-01T21:01:19.490778+00:00",
+    "generation_record_sha256": "eacf4a3120a2fdf1fbcb294ae52bdbe346b7642541d1b585af20c527a458011b",
+    "reviewer": "bxv6gs"
+  },
+  "curation": {
+    "locked": true,
+    "method": "manual_fact_level_revision",
+    "scope": "all direct mentions of each selected clinical fact"
+  },
+  "edits": [
+    {
+      "category": "imaging_finding",
+      "edit_id": "e01a",
+      "end": 897,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "reported but unverified biliary findings",
+      "natural_end": 898,
+      "natural_start": 836,
+      "natural_text_sha256": "bd3f578fbf04f0eabab305cc2e52482cba5013380e383c3aa969691aa03b0ef5",
+      "source_text_sha256": "5424dabbe36ee651e3b41b6904b12318c070082f32a4d1c1531e4709ea824919",
+      "start": 860
+    },
+    {
+      "category": "imaging_finding",
+      "edit_id": "e01b",
+      "end": 929,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "The reported size of the biliary finding was unavailable",
+      "natural_end": 930,
+      "natural_start": 899,
+      "natural_text_sha256": "ada57f2943094de29ec0548ace0f3d5238fbc6a53690ee411750c344020f1a1b",
+      "source_text_sha256": "20ed5dee06a76e8014286a6532483a9cd503a55cbf8d733da21b01562fe46a25",
+      "start": 899
+    },
+    {
+      "category": "procedure",
+      "edit_id": "e02",
+      "end": 987,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "a reported but unverified procedure",
+      "natural_end": 988,
+      "natural_start": 931,
+      "natural_text_sha256": "f078edeb3f0736e6897140f29a4f8fec7ffb145494f515b31aaa74ac01e7016d",
+      "source_text_sha256": "60874d5f7626d31d1120ec884eac6e33ffe5d7cf19b6ccdcbae9e32955ebb58d",
+      "start": 963
+    }
+  ],
+  "generator": {
+    "api_mode": "responses",
+    "attempt_count": 1,
+    "model": "gpt-5.5-2026-04-23",
+    "model_revision": "gpt-5.5-2026-04-23",
+    "partial_salvage": false,
+    "prompt_sha256": "92c832eba689a241bcc533975d7c6b4ae2386d2943c37d87f81fee5f6f480999",
+    "reasoning_effort": "medium",
+    "recorded_at": "2026-10-01T17:01:37.599855+00:00",
+    "rejected_selection_count": 0,
+    "seed": null,
+    "store": false,
+    "temperature": null
+  },
+  "schema_version": 2,
+  "severity": "evidence-insufficient",
+  "source_sha256": "4615251909dfdb1a02bb564265b612e8de8deb3bf1024fb0145d788ab8426d6b",
+  "status": "approved",
+  "task": "clinical_trial_matching_task_26",
+  "topic_id": 26
+}

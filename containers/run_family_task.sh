@@ -36,10 +36,14 @@ export APPTAINER_TMPDIR="$run_tmp"
 export APPTAINER_CACHEDIR="$benchmark_root/.apptainer-cache"
 export PYTHONPATH="$benchmark_root${PYTHONPATH:+:$PYTHONPATH}"
 
+# Keep each experiment campaign in an explicitly selectable Harbor jobs root.
+jobs_dir="${JOBS_DIR:-$benchmark_root/jobs}"
+
 mkdir -p \
   "$APPTAINER_CACHEDIR" \
   "$benchmark_root/.cache/harbor-sif" \
-  "$benchmark_root/jobs"
+  "$jobs_dir"
+jobs_dir="$(cd -- "$jobs_dir" && pwd -P)"
 
 cd "$benchmark_root"
 
@@ -63,6 +67,6 @@ uv run harbor run \
   --n-attempts "${N_ATTEMPTS:-1}" \
   --n-concurrent "${N_CONCURRENT:-1}" \
   --job-name "${JOB_NAME:-apptainer-$task_name}" \
-  --jobs-dir "$benchmark_root/jobs" \
+  --jobs-dir "$jobs_dir" \
   --yes \
   "$@"

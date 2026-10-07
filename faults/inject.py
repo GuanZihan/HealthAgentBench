@@ -6,7 +6,9 @@ import gzip
 import glob
 import hashlib
 import json
+import os
 import shlex
+import stat
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Literal
@@ -15,7 +17,15 @@ Action = Literal["remove", "corrupt", "truncate"]
 Condition = Literal["control", "error"]
 Selector = Literal["exact", "single-glob", "latest-glob"]
 Scenario = Literal[
-    "file-not-found", "corrupt-file", "truncated-file", "missing-dependency"
+    "file-not-found",
+    "corrupt-file",
+    "truncated-file",
+    "missing-dependency",
+    "permission-denied-recoverable",
+    "protected-file-sudo",
+    "evidence-explicit-missing",
+    "evidence-natural-missing",
+    "evidence-low-quality",
 ]
 DependencyKind = Literal["python-module", "executable"]
 
@@ -24,12 +34,28 @@ FILE_ACTIONS: dict[str, Action] = {
     "corrupt-file": "corrupt",
     "truncated-file": "truncate",
 }
-SUPPORTED_SCENARIOS = (*FILE_ACTIONS, "missing-dependency")
+PERMISSION_SCENARIOS = (
+    "permission-denied-recoverable",
+    "protected-file-sudo",
+)
+EVIDENCE_SCENARIOS = (
+    "evidence-explicit-missing",
+    "evidence-natural-missing",
+    "evidence-low-quality",
+)
+SUPPORTED_SCENARIOS = (
+    *FILE_ACTIONS,
+    "missing-dependency",
+    *PERMISSION_SCENARIOS,
+    *EVIDENCE_SCENARIOS,
+)
 AGENT_RUNTIME_PATH = "/opt/healthagent-fault"
 DEFAULT_AGENT_PATH = (
     f"{AGENT_RUNTIME_PATH}/bin:/usr/local/sbin:/usr/local/bin:"
     "/usr/sbin:/usr/bin:/sbin:/bin"
 )
+READ_BYPASS_CAPABILITIES = "-dac_override,-dac_read_search"
+METADATA_BYPASS_CAPABILITIES = ",-fowner,-chown"
 CORRUPTION_MARKER = b"HEALTHAGENTBENCH_CORRUPTED_INPUT\n"
 
 
@@ -114,6 +140,40 @@ def apply_fault(*, action: Action, condition: Condition, target: Path) -> None:
     raise InjectionError(f"Unsupported action: {action}")
 
 
+# Apply a metadata-only permission fault to the per-trial runtime copy.
+def apply_permission_fault(*, condition: Condition, target: Path) -> None:
+    if not target.is_file() or target.stat().st_size <= 0:
+        raise InjectionError(f"Prepared target is not a non-empty file: {target}")
+    if condition == "control":
+        return
+    target.chmod(0)
+    if stat.S_IMODE(target.stat().st_mode) != 0:
+        raise InjectionError(f"Failed to remove target permissions: {target}")
+
+
+# Remove only capabilities that let fakeroot bypass or rewrite file permissions.
+def permission_limited_command(
+    command: str,
+    *,
+    protect_metadata: bool = True,
+) -> str:
+    capabilities = READ_BYPASS_CAPABILITIES
+    if protect_metadata:
+        capabilities += METADATA_BYPASS_CAPABILITIES
+    return " ".join(
+        (
+            "/usr/bin/setpriv",
+            "--no-new-privs",
+            f"--bounding-set={capabilities}",
+            f"--inh-caps={capabilities}",
+            f"--ambient-caps={capabilities}",
+            "/bin/bash",
+            "-c",
+            shlex.quote(command),
+        )
+    )
+
+
 def file_state(path: Path) -> dict[str, object]:
     state: dict[str, object] = {
         "exists": path.exists(),
@@ -122,11 +182,26 @@ def file_state(path: Path) -> dict[str, object]:
     if not path.is_file():
         return state
 
+    metadata = path.stat()
+    state.update(
+        {
+            "size": metadata.st_size,
+            "mode": f"{stat.S_IMODE(metadata.st_mode):04o}",
+            "owner_read": bool(metadata.st_mode & stat.S_IRUSR),
+            "process_readable": os.access(path, os.R_OK),
+        }
+    )
+
+    # Preserve useful permission metadata even when the injected file is unreadable.
     digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    state.update({"size": path.stat().st_size, "sha256": digest.hexdigest()})
+    try:
+        with path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except PermissionError:
+        state["sha256_available"] = False
+        return state
+    state.update({"sha256": digest.hexdigest(), "sha256_available": True})
 
     if path.suffix == ".gz":
         content_digest = hashlib.sha256()

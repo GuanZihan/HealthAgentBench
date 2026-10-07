@@ -1,0 +1,58 @@
+{
+  "approval": {
+    "approved_at": "2026-10-01T21:02:01.124583+00:00",
+    "generation_record_sha256": "0448aee860e7eff99ca552a171b13a8f372d602be55d9b17f0dae603d91825d3",
+    "reviewer": "bxv6gs"
+  },
+  "curation": {
+    "locked": true,
+    "method": "manual_fact_level_revision",
+    "scope": "all direct mentions of each selected clinical fact"
+  },
+  "edits": [
+    {
+      "category": "demographic",
+      "edit_id": "e01",
+      "end": 28,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "reportedly age-uncertain",
+      "natural_end": 29,
+      "natural_start": 17,
+      "natural_text_sha256": "dc2ab58b3446d7ee4c549e62bcafba55804c4e5142f1d040f06dc928e2a41d6a",
+      "source_text_sha256": "7b9900e47ed178d9ded05b55f68a08fdad51fdcc195101a038542da361d596de",
+      "start": 17
+    },
+    {
+      "category": "temporal_history",
+      "edit_id": "e02",
+      "end": 171,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "at a reported but unverified frequency and duration",
+      "natural_end": 172,
+      "natural_start": 84,
+      "natural_text_sha256": "c3e155d9f1445ac0bd7b3738eee86c207267c448fc4ab23e0345a5b3d60b3c72",
+      "source_text_sha256": "884ba3cd0cf56b653ffff7132a19043955729decc2e155c2ca17f541c499bcde",
+      "start": 101
+    }
+  ],
+  "generator": {
+    "api_mode": "responses",
+    "attempt_count": 1,
+    "model": "gpt-5.5-2026-04-23",
+    "model_revision": "gpt-5.5-2026-04-23",
+    "partial_salvage": false,
+    "prompt_sha256": "92c832eba689a241bcc533975d7c6b4ae2386d2943c37d87f81fee5f6f480999",
+    "reasoning_effort": "medium",
+    "recorded_at": "2026-10-01T17:02:30.218548+00:00",
+    "rejected_selection_count": 0,
+    "seed": null,
+    "store": false,
+    "temperature": null
+  },
+  "schema_version": 2,
+  "severity": "evidence-insufficient",
+  "source_sha256": "066d2fa2a68e582b18960c26b76e2bcdec52d653607451aa10444dd3e3fa1785",
+  "status": "approved",
+  "task": "clinical_trial_matching_task_35",
+  "topic_id": 35
+}

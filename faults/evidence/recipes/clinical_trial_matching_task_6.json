@@ -1,0 +1,70 @@
+{
+  "approval": {
+    "approved_at": "2026-10-01T21:01:05.747125+00:00",
+    "generation_record_sha256": "0602c978d6ff0f680b07f5837230f49772dffd1fcf0f98048e5d190d169fc386",
+    "reviewer": "bxv6gs"
+  },
+  "curation": {
+    "locked": true,
+    "method": "manual_fact_level_revision",
+    "scope": "all direct mentions of each selected clinical fact"
+  },
+  "edits": [
+    {
+      "category": "comorbidity",
+      "edit_id": "e01",
+      "end": 67,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "a reported but unspecified renal replacement history",
+      "natural_end": 68,
+      "natural_start": 24,
+      "natural_text_sha256": "6b578018e938e7b33151274c8fb6e278c87118ec771a27eaa44eca22bb59f7d3",
+      "source_text_sha256": "35fcd89bf16b1c6491e5cd2bae7d60ea019e3eebcb255801610a911c970f4559",
+      "start": 29
+    },
+    {
+      "category": "diagnosis",
+      "edit_id": "e02a",
+      "end": 209,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "a reported but unverified history of prior enteric infections",
+      "natural_end": 210,
+      "natural_start": 129,
+      "natural_text_sha256": "5df773b46e4604b1dbf8819f4deb8a7e1a53554bea031ee73b752cae7dd211e4",
+      "source_text_sha256": "a0af8f5639a1899a49eae97884355be5ef83ea5a7f447a962851ed741ff4abe1",
+      "start": 137
+    },
+    {
+      "category": "diagnosis",
+      "edit_id": "e02b",
+      "end": 808,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "reported but unverified recurrence history",
+      "natural_end": 808,
+      "natural_start": 782,
+      "natural_text_sha256": "97937061350e49f7577e76437c87b18651d124bac93a8cae7b2c97a486bdecc6",
+      "source_text_sha256": "62d5c799f4db267dd4e50a82ee8b20a8c5686a03d95e977cb0ada397a2db7c4c",
+      "start": 792
+    }
+  ],
+  "generator": {
+    "api_mode": "responses",
+    "attempt_count": 3,
+    "model": "gpt-5.5-2026-04-23",
+    "model_revision": "gpt-5.5-2026-04-23",
+    "partial_salvage": true,
+    "prompt_sha256": "92c832eba689a241bcc533975d7c6b4ae2386d2943c37d87f81fee5f6f480999",
+    "reasoning_effort": "medium",
+    "recorded_at": "2026-10-01T17:03:37.120098+00:00",
+    "rejected_selection_count": 1,
+    "seed": null,
+    "store": false,
+    "temperature": null
+  },
+  "schema_version": 2,
+  "severity": "evidence-insufficient",
+  "source_sha256": "9c152b1f76751a79cd0ccbb147eda037acc5f5b191052fee60c8ff61e0bffc57",
+  "status": "approved",
+  "task": "clinical_trial_matching_task_6",
+  "topic_id": 6
+}

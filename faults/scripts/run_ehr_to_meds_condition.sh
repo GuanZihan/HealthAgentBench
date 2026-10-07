@@ -14,15 +14,28 @@ task_image="$benchmark_root/containers/healthagentbench-ehr-to-meds.sif"
 fault_scenario="${FAULT_SCENARIO:-file-not-found}"
 
 case "$fault_scenario" in
-  file-not-found | checksum-mismatch | recovery-http-403) ;;
+  file-not-found | checksum-mismatch | recovery-http-403 | \
+    permission-denied-recoverable | protected-file-sudo | \
+    evidence-explicit-missing | evidence-natural-missing | evidence-low-quality) ;;
   *)
     printf 'Unsupported FAULT_SCENARIO: %s\n' "$fault_scenario" >&2
-    printf 'Supported values: file-not-found, checksum-mismatch, recovery-http-403\n' >&2
+    printf '%s\n' \
+      'Supported values: file-not-found, checksum-mismatch, recovery-http-403,' \
+      'permission-denied-recoverable, protected-file-sudo, evidence-explicit-missing,' \
+      'evidence-natural-missing, evidence-low-quality' >&2
     exit 2
     ;;
 esac
 
 experiment_name="${EXPERIMENT_NAME:-ehr-meds-${fault_scenario}}"
+agent_name="${AGENT:-codex}"
+model_name="${MODEL:-gpt-5.6-luna}"
+
+# Route the text-only Qwen alias through the adapter that removes view_image.
+agent_selector=(--agent "$agent_name")
+if [[ "$agent_name" == "codex" && "$model_name" == "qwen-coder" ]]; then
+  agent_selector=(--agent-import-path faults.codex_agent:TextOnlyCodex)
+fi
 
 if [[ ! "$experiment_name" =~ ^[A-Za-z0-9._-]+$ ]]; then
   printf 'EXPERIMENT_NAME contains unsupported characters: %s\n' \
@@ -49,17 +62,21 @@ export APPTAINER_TMPDIR="$run_tmp"
 export APPTAINER_CACHEDIR="$benchmark_root/.apptainer-cache"
 export PYTHONPATH="$benchmark_root${PYTHONPATH:+:$PYTHONPATH}"
 
+# Keep each experiment campaign in an explicitly selectable Harbor jobs root.
+jobs_dir="${JOBS_DIR:-$benchmark_root/jobs}"
+
 mkdir -p \
   "$APPTAINER_CACHEDIR" \
   "$benchmark_root/.cache/harbor-sif" \
-  "$benchmark_root/jobs"
+  "$jobs_dir"
+jobs_dir="$(cd -- "$jobs_dir" && pwd -P)"
 
 cd "$benchmark_root"
 
 uv run harbor run \
   --path tasks/ehr_to_meds_etl \
-  --agent codex \
-  --model "${MODEL:-gpt-5.6-luna}" \
+  "${agent_selector[@]}" \
+  --model "$model_name" \
   --agent-kwarg "reasoning_effort=${REASONING_EFFORT:-medium}" \
   --agent-setup-timeout-multiplier 4 \
   --environment-import-path faults.singularity_fault:EhrToMedsFaultEnvironment \
@@ -72,6 +89,6 @@ uv run harbor run \
   --n-attempts "${N_ATTEMPTS:-1}" \
   --n-concurrent "${N_CONCURRENT:-1}" \
   --job-name "${experiment_name}-${condition}" \
-  --jobs-dir "$benchmark_root/jobs" \
+  --jobs-dir "$jobs_dir" \
   --yes \
   "$@"

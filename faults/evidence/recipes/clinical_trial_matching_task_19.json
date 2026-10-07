@@ -1,0 +1,58 @@
+{
+  "approval": {
+    "approved_at": "2026-10-01T20:59:52.729245+00:00",
+    "generation_record_sha256": "085f91c9ed645f4c864eb95dab6dc449d4b94c566a31c8869e5dce34dd09110e",
+    "reviewer": "bxv6gs"
+  },
+  "curation": {
+    "locked": true,
+    "method": "manual_fact_level_revision",
+    "scope": "all direct mentions of each selected clinical fact"
+  },
+  "edits": [
+    {
+      "category": "laboratory_value",
+      "edit_id": "e01",
+      "end": 431,
+      "importance": "supporting",
+      "low_quality_replacement": "an unavailable reported rate",
+      "natural_end": 450,
+      "natural_start": 414,
+      "natural_text_sha256": "bb6beb371c7262b8c8fda61f1bf0443223ae961587e6a152134708cbcac2af3a",
+      "source_text_sha256": "19da0f23562dba9205ba705702ab6a062ee448b9bfecd1cb3e147a9b5b80f297",
+      "start": 419
+    },
+    {
+      "category": "diagnosis",
+      "edit_id": "e02",
+      "end": 531,
+      "importance": "eligibility_critical",
+      "low_quality_replacement": "a reported but unverified arrhythmia",
+      "natural_end": 545,
+      "natural_start": 484,
+      "natural_text_sha256": "18d20256027c2b5c2ac9c93cabb847e2b74b8c26ea1d41b438d79f798c5a6637",
+      "source_text_sha256": "35202b104cdb5570706eaef5d244fec6086cff0c3f29efa318a71dfab0d4c9de",
+      "start": 517
+    }
+  ],
+  "generator": {
+    "api_mode": "responses",
+    "attempt_count": 1,
+    "model": "gpt-5.5-2026-04-23",
+    "model_revision": "gpt-5.5-2026-04-23",
+    "partial_salvage": false,
+    "prompt_sha256": "92c832eba689a241bcc533975d7c6b4ae2386d2943c37d87f81fee5f6f480999",
+    "reasoning_effort": "medium",
+    "recorded_at": "2026-10-01T17:01:31.015795+00:00",
+    "rejected_selection_count": 0,
+    "seed": null,
+    "store": false,
+    "temperature": null
+  },
+  "schema_version": 2,
+  "severity": "evidence-insufficient",
+  "source_sha256": "6de21234b1ab272f3f8f59cc2efdea94983303ab44da6fc922a7d1aab4434190",
+  "status": "approved",
+  "task": "clinical_trial_matching_task_19",
+  "topic_id": 19
+}

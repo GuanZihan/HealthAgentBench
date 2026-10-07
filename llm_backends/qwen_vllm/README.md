@@ -105,14 +105,18 @@ H200/H20 级 GPU；不要默认拿它在单卡上试。可以选择更小或量�
 
 ## 3. 启动服务
 
-进入计算节点后运行：
+进入计算节点后运行。下面保留两套已经固定 revision 的配置，实验记录里不要只写
+`qwen-coder`，还要保存具体的 `MODEL_ID` 和 `MODEL_REVISION`。
+
+### Qwen3-Coder-30B-A3B-Instruct
 
 ```bash
 cd HealthAgentBench
 
-MODEL_ID=Qwen/Qwen3-Coder-Next-FP8 \
-MODEL_REVISION=da6e2ed27304dd39abadd9c82ef50e8de67bdd4c \
+MODEL_ID=Qwen/Qwen3-Coder-30B-A3B-Instruct \
+MODEL_REVISION=b2cff646eb4bb1d68355c01b18ae02e7cf42d120 \
 VLLM_SIF="$PWD/containers/vllm-openai-v0.29.0-cu129.sif" \
+PORT=8010 \
 TENSOR_PARALLEL_SIZE=1 \
 MAX_MODEL_LEN=32768 \
 GPU_MEMORY_UTILIZATION=0.88 \
@@ -121,11 +125,43 @@ RUN_ID=qwen3-coder-rep1 \
     --enable-expert-parallel
 ```
 
+### Qwen3-Coder-Next-FP8
+
+当前本地缓存对应的模型 revision 是
+`da6e2ed27304dd39abadd9c82ef50e8de67bdd4c`。这个模型的 `config.json` 已经声明
+FP8 quantization，所以让 vLLM 自动读取模型配置即可，不需要再额外添加
+`--quantization fp8`。
+
+```bash
+cd HealthAgentBench
+
+MODEL_ID=Qwen/Qwen3-Coder-Next-FP8 \
+MODEL_REVISION=da6e2ed27304dd39abadd9c82ef50e8de67bdd4c \
+VLLM_SIF="$PWD/containers/vllm-openai-v0.29.0-cu129.sif" \
+SERVED_MODEL_NAME=qwen-coder \
+PORT=8010 \
+TENSOR_PARALLEL_SIZE=1 \
+MAX_MODEL_LEN=32768 \
+DTYPE=auto \
+GPU_MEMORY_UTILIZATION=0.88 \
+RUN_ID=qwen3-coder-next-fp8-rep1 \
+  bash llm_backends/qwen_vllm/launch_qwen_coder.sh -- \
+    --enable-expert-parallel
+```
+
+`Qwen3-Coder-Next-FP8` 的权重显著大于上面的 30B-A3B 模型。只有单卡显存足够时
+才使用 `TENSOR_PARALLEL_SIZE=1`；使用多张 GPU 时，把它改成实际 GPU 数量，并在
+同一个 Slurm allocation 内启动服务。模型服务仍然使用 API alias
+`qwen-coder`，所以 benchmark 侧的 `MODEL=qwen-coder` 不需要改变。
+
 这条命令会保持在前台。看到下面的信息，才说明服务真的可以接请求了：
 
 ```text
-[qwen-vllm] service is ready: http://127.0.0.1:8000/v1
+[qwen-vllm] service is ready: http://127.0.0.1:8010/v1
 ```
+
+这里的端口来自 `PORT`。如果改回脚本默认的 `8000`，后续 curl 和 benchmark
+命令里的 URL 也要一起改成 `8000`。
 
 如果模型是本地目录，`MODEL_ID` 使用绝对路径即可，脚本会把它只读挂进
 Apptainer。此时 `MODEL_REVISION` 只作为本地 snapshot 的记录标签，不会作为
@@ -259,6 +295,19 @@ JOB_NAME=ct-qwen-file-not-found-rep1-error \
 
 如果要跑普通任务而不是 fault pair，同样把两个 `--agent-env` 参数附加到
 `containers/run_family_task.sh` 后面即可。
+
+### Qwen Coder 的图像工具策略
+
+`qwen-coder` 是纯文本服务别名。现有 fault runners 检测到
+`--agent codex --model qwen-coder` 时，会自动使用
+`faults.codex_agent:TextOnlyCodex`。由于多个已发布 Codex CLI 版本不会可靠执行
+`tools.view_image=false`，adapter 会启动一个仅属于当前 trial 的本地过滤层。它在
+请求到达 telemetry 和 vLLM 前删除 `view_image` 工具定义、对应的历史调用以及
+残留的 `input_image` 内容。其他模型继续使用 Harbor 原始 Codex adapter，不受影响。
+
+关闭 `view_image` 只会避免文本模型收到不支持的图像输入，并不会让 Qwen Coder
+获得视觉能力。CT、X-ray 和 pathology 任务仍只能依靠 Python、图像统计和其他
+命令行分析；需要可靠的视觉判读时应换用兼容的多模态模型。
 
 ## 8. 实验记录建议
 

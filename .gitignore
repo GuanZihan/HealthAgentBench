@@ -39,6 +39,12 @@ htmlcov/
 # temporary files
 .tmp/
 
+# Qwen evidence-generation audits contain local benchmark patient notes.
+faults/evidence/generated/
+
+# Local evidence visualizations are derived from gated benchmark inputs.
+faults/evidence/exports/
+
 # Per-task gold is derived in-container at run time from the downloaded report
 # (see scripts/ct_abnormality/gold_derivation.py) and written here by the
 # bootstrap. It is never committed — the answer key / report text stay out of git.
